@@ -1,0 +1,178 @@
+---
+title: "Reproducible Research Assignment1"
+author: "Amit Sinha"
+date: "Sunday, September 14, 2014"
+output: html_document
+---
+
+###Loading and preprocessing the data  
+####1. Load the data and Transform
+```{r, echo=TRUE}
+library(stats)
+activity.data <- read.csv(file = "activity.csv",header = T,sep = ",")
+#rearranging column order
+activity.data <- data.frame(date = activity.data$date,
+                            interval = activity.data$interval,
+                            steps = activity.data$steps)
+```
+
+
+###Mean total number of steps taken per day
+```{r, echo=TRUE}
+daywise.steps <- aggregate.data.frame(activity.data$steps,
+                                      by = list(activity.data$date),
+                                      FUN = sum,na.rm = T)
+colnames(daywise.steps) <- c("date","steps")
+```
+####1. Make histogram  
+
+```{r histogram,fig.height = 4}
+par(mar = c(5,4,1,1),las = 1)
+hist(daywise.steps$steps,breaks = 50,xlab = "Steps",ylab = "Frequency",
+     col = "red",main ="A histogram of the total number of steps taken each day" )
+```  
+
+  
+####2. Calculate Mean and Median  
+```{r,echo=TRUE}
+steps.mean <- round(mean(daywise.steps$steps),0)
+steps.median <- median(daywise.steps$steps)
+```
+
+1.Mean total steps taken per day : **`r format(steps.mean,scientific = FALSE)`**  
+2.Median total steps taken per day: **`r format(steps.median, scientific = FALSE)`**     
+  
+### Average daily activity pattern
+
+```{r, echo=TRUE}
+intervalwise.steps <- aggregate.data.frame(activity.data$steps,
+                                           by = list(activity.data$interval),
+                                           FUN = mean,na.rm = T)
+colnames(intervalwise.steps) <- c("interval","steps")
+```
+
+####1. Make times series plot 
+```{r timeseries,fig.height = 4}
+par(mar = c(5,4,1,1),las = 1)
+plot(x = intervalwise.steps$interval,y = intervalwise.steps$steps,
+     xlab = "time(5 min interval)",ylab = "Avg steps Taken",
+     type = "l",main ="Average number of steps taken at 5-min interval" )
+```  
+
+####2. Interval with maximum number of steps:
+The 5 min interval starting `r intervalwise.steps[which.max(x = intervalwise.steps$steps),1]`, ending
+`r intervalwise.steps[which.max(x = intervalwise.steps$steps)+1,1]` contains the maximum number of steps.
+
+
+### Inputing missing values
+####1. Calculating number of missing values
+```{r,echo=TRUE}
+missing.val <- sum(is.na(activity.data$steps))
+
+```
+
+  
+Total number of missing values in the dataset is `r missing.val`
+
+
+  
+####2. Filling in all of the missing values in the dataset using mean for that 5-minute interval.
+
+```{r,echo=TRUE}
+activity.newdata = activity.data
+missing.df <- activity.newdata[is.na(activity.newdata$steps),]
+missing.index <- match(missing.df$interval,intervalwise.steps$interval)
+activity.newdata$steps[is.na(activity.newdata$steps)] <- intervalwise.steps$steps[missing.index]
+
+```
+ 
+ 
+ 
+  
+Old data:
+```{r showtable.old, results='asis'}  
+library(xtable)  
+xt.old <- xtable(head(activity.data))
+print(xt.old,type = "html")
+```
+  
+
+
+
+  
+####3. New dataset with the missing data filled in.
+  
+New data:
+```{r showtable.new, results='asis'}  
+library(xtable)  
+xt.new <- xtable(head(activity.newdata))
+print(xt.new,type = "html")
+```
+
+
+  
+####3. Mean total number of steps taken per day using new data set
+```{r, echo=TRUE}
+daywise.steps.new <- aggregate.data.frame(activity.newdata$steps,
+                                      by = list(activity.newdata$date),
+                                      FUN = sum,na.rm = T)
+colnames(daywise.steps.new) <- c("date","steps")
+```
+
+  
+####4. Histogram using new data
+
+```{r histogram.2,fig.height = 4}
+par(mar = c(5,4,1,1),las = 1)
+hist(daywise.steps.new$steps,breaks = 50,xlab = "Steps",ylab = "Frequency",
+     col = "red",main ="A histogram of the total number of steps taken each day(new data)" )
+```  
+  
+    
+```{r,echo=TRUE}
+steps.mean.new <- round(mean(daywise.steps.new$steps),0)
+steps.median.new <- median(daywise.steps.new$steps)
+```
+  
+    
+     
+1. New Mean total steps taken per day : **`r format(steps.mean.new,scientific = FALSE)`**    
+2. New Median total steps taken per day: **`r format(steps.median.new,scientific = FALSE)`**       
+
+- New mean and median are equal to each other and slightly larger in value compared to old values.
+- Also, the new histogram appears to be normally distributed around mean. 
+
+
+  
+###Differences in activity patterns between weekdays and weekends
+ 
+  
+   
+####1. Adding new factor variable with two levels - "weekday" and "weekend"  
+
+```{r,echo=TRUE}
+
+day.type <- weekdays(as.Date(activity.newdata$date),abbreviate = T)
+day.type <- ifelse(test = day.type %in% c("Sun","Sat"),yes = "weekend","weekday")
+activity.newdata$day.type <- as.factor(day.type)
+
+
+daywise.steps.new.panel <- aggregate.data.frame(activity.newdata$steps,
+                                      by = list(activity.newdata$interval,activity.newdata$day.type),
+                                      FUN = mean,na.rm = T)
+colnames(daywise.steps.new.panel) <- c("interval","day.type","steps")                                      
+```
+  
+    
+####2. Panel plot 
+```{r plot.2,fig.height = 4}
+xyplot(steps ~ interval | day.type,data = daywise.steps.new.panel,type = "l",layout = c(1,2),,main = "Average number of steps taken")
+```
+
+
+  
+   
+  1. During weekend, number of steps are more uniformally distributed between 800 and 2000.  
+  2. During weekdays, majority of the steps are concentrated between 800 and 1000.
+
+
